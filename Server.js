@@ -149,7 +149,7 @@ function viewEmployees(){
 
 function updateEmployee(){
     inquirer
-    .prompt({
+    .prompt([{
         name: "employee",
         type: "input",
         message: "Which employee do you want to update?"
@@ -158,10 +158,11 @@ function updateEmployee(){
         name: "role",
         type: "input",
         message: "What new role does this employee have?"
-    })
+    }])
     .then(function(answer) {
 
         var employee;
+        
 
         connection.query("SELECT * FROM employee", function(err, res) {
             if (err) throw err;
@@ -170,8 +171,7 @@ function updateEmployee(){
 
                 if (name == answer.employee){
                   employee = res[i];
-                  console.log(employee);
-                  return employee;
+                  return(employee);
                 } 
                 console.log("this employee doesnt exist");
             }
@@ -181,13 +181,22 @@ function updateEmployee(){
         connection.query("SELECT * FROM roles", function(err, res) {
             if (err) throw err;
             for (var i = 0; i < res.length; i++){
-               var role = 
-            }
+               var role = res[i];
+
+               if (role.title == answer.role){
+                   console.log(role.title);
+                   console.log(role.id);
+
+                  employee.role_id = role.id;
+                  return role;
+               }
+               console.log("This role does not exist")
+            } 
 
         });
 
-        
-      runSearch();
+        console.log("This employees role has been updated!");
+        runSearch();
     });
 }
 
