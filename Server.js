@@ -41,7 +41,7 @@ function runSearch() {
                 break;
 
             case "Add a role":
-                addRole();
+                addRoles();
                 break;
                 
             case "Add an employee":
@@ -86,18 +86,85 @@ function addDepartment() {
       });
 }
 
+function addEmployee() {
+    inquirer
+      .prompt([{
+          name: "first",
+          type: "input",
+          message: "What is the first name of this employee?"
+      },
+        {
+          name: "last",
+          type: "input",
+          message: "What is this employees last name?"
+        },
+         {
+            name: "role",
+            type: "input",
+            message: "What role does this employee have?"
+        },
+        {
+            name: "manager",
+            type: "input",
+            message: "What is this employees manager ID (if none enter 01)?"
+        }
+    ])
+    .then(function(answer) {
+
+       getRoleID(answer.role).then(function(roleId){
+        
+
+        var query = "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)";
+        connection.query(query, [answer.first, answer.last, roleId, answer.manager], function(err, res) {
+           if (err) throw err;
+           console.log("the employee " + answer.first + ' ' + answer.last + " was added");
+           runSearch();
+        });
+
+
+       });
+    })
+}
+
 function addRoles() {
     inquirer
-      .prompt({
-          name: "newdepartment",
+      .prompt([{
+          name: "newRole",
           type: "input",
-          message: "What is the name of the new department?"
-      })
+          message: "What is the name of the new Role?"
+      },
+      {
+         name: "salary",
+         type: "input",
+         message: "What is this roles salary?"
+      },
+      {
+        name: "department",
+        type: "input",
+        message: "What department is this role in?"
+     }])
       .then(function(answer) {
-          var query = "INSERT INTO department (depName) VALUES (?)";
-          connection.query(query, answer.newdepartment, function(err, res) {
+          
+        var depId;
+
+        connection.query("SELECT * FROM department", function(err, res) {
+            if (err) throw err;
+            for (var i = 0; i < res.length; i++){
+               var dep = res[i];
+
+               if (answer.department == dep.depName){
+                   depId = dep.id;
+                   console.log(depId);
+                   return depId;
+               }
+            } console.log("This department does not exist!");
+        });
+
+
+        var query = "INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?)";
+        connection.query(query, [answer.newRole, answer.salary, depId], function(err, res) {
            if (err) throw err;
-           console.log("the " + answer.newdepartment + "department was created");
+           console.log("the " + answer.newRole + "position was created");
            runSearch();
           });
       });
@@ -150,9 +217,14 @@ function viewEmployees(){
 function updateEmployee(){
     inquirer
     .prompt([{
-        name: "employee",
+        name: "employeeFirst",
         type: "input",
-        message: "Which employee do you want to update?"
+        message: "What is the first name of the employee you want to update?"
+    }, 
+    {
+        name: "employeeLast",
+        type: "input",
+        message: "What is the last name of the employee you want to update?"
     },
     {
         name: "role",
@@ -161,42 +233,47 @@ function updateEmployee(){
     }])
     .then(function(answer) {
 
-        var employee;
+        var roleID = getRoleID(name)
         
 
-        connection.query("SELECT * FROM employee", function(err, res) {
+        connection.query("UPDATE empoyee SET ? WHERE ? AND ?",
+        [{role_id: roleID}, 
+            {first_name: answer.employeeFirst},
+            {last_name: employeeLast}],
+             function(err, res) {
             if (err) throw err;
-            for (var i = 0; i < res.length; i++){
-                var name = res[i].first_name + " " + res[i].last_name;
-
-                if (name == answer.employee){
-                  employee = res[i];
-                  return(employee);
-                } 
-                console.log("this employee doesnt exist");
-            }
+           
         });
 
         
-        connection.query("SELECT * FROM roles", function(err, res) {
-            if (err) throw err;
-            for (var i = 0; i < res.length; i++){
-               var role = res[i];
-
-               if (role.title == answer.role){
-                   console.log(role.title);
-                   console.log(role.id);
-
-                  employee.role_id = role.id;
-                  return role;
-               }
-               console.log("This role does not exist")
-            } 
-
-        });
-
+    
         console.log("This employees role has been updated!");
         runSearch();
     });
 }
 
+
+
+//========== roles to Role_id ==============
+
+
+async function getRoleID(name){
+ var role = await new Promise((resolve,rejects) => {
+    connection.query("SELECT * FROM roles", function(err, res) {
+        if (err) throw err;
+        for (var i = 0; i < res.length; i++){
+           var currentRole = res[i];
+
+           if (currentRole.title == name) {
+               roleID = currentRole.id;
+              resolve(roleID);
+           }
+           
+        } 
+        
+        rejects("This role does not exist");
+
+    });
+ })
+return role;
+}
