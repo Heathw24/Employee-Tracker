@@ -145,28 +145,17 @@ function addRoles() {
      }])
       .then(function(answer) {
           
-        var depId;
-
-        connection.query("SELECT * FROM department", function(err, res) {
-            if (err) throw err;
-            for (var i = 0; i < res.length; i++){
-               var dep = res[i];
-
-               if (answer.department == dep.depName){
-                   depId = dep.id;
-                   console.log(depId);
-                   return depId;
-               }
-            } console.log("This department does not exist!");
-        });
+        getDepID(answer.department).then(function(depID){
 
 
         var query = "INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?)";
-        connection.query(query, [answer.newRole, answer.salary, depId], function(err, res) {
+        connection.query(query, [answer.newRole, answer.salary, depID], function(err, res) {
            if (err) throw err;
-           console.log("the " + answer.newRole + "position was created");
+           console.log("the " + answer.newRole + " position was created");
            runSearch();
           });
+
+        });  
       });
 }
 
@@ -233,28 +222,31 @@ function updateEmployee(){
     }])
     .then(function(answer) {
 
-        var roleID = getRoleID(name)
+        getRoleID(answer.role).then(function(roleID){
+            console.log(roleID);
         
 
-        connection.query("UPDATE empoyee SET ? WHERE ? AND ?",
+        connection.query("UPDATE employee SET ? WHERE ? AND ?",
         [{role_id: roleID}, 
             {first_name: answer.employeeFirst},
-            {last_name: employeeLast}],
+            {last_name: answer.employeeLast}],
              function(err, res) {
             if (err) throw err;
            
         });
 
-        
-    
         console.log("This employees role has been updated!");
         runSearch();
+
+        });
+    
+        
     });
 }
 
 
 
-//========== roles to Role_id ==============
+//========== text to id functions ==============
 
 
 async function getRoleID(name){
@@ -277,3 +269,24 @@ async function getRoleID(name){
  })
 return role;
 }
+
+async function getDepID(name){
+    var dep = await new Promise((resolve,rejects) => {
+       connection.query("SELECT * FROM department", function(err, res) {
+           if (err) throw err;
+           for (var i = 0; i < res.length; i++){
+              var currentDep = res[i];
+   
+              if (currentDep.depName == name) {
+                  depID = currentDep.id;
+                 resolve(depID);
+              }
+              
+           } 
+           
+           rejects("This department does not exist");
+   
+       });
+    })
+   return dep;
+   }
